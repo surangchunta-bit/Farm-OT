@@ -1162,8 +1162,10 @@ function imgQuality(src){return new Promise(done=>{
 /* ---------- สแกนเนอร์: เปิดค้างไว้ ระบบคอยดูให้เองว่าชัดพอหรือยัง ---------- */
 let liveTimer=null, goodRun=0, prevGray=null, autoOn=true, busyShot=false;
 let steadyBlurTicks=0, camTrack=null, scEl=null;
-const NEED=5;               /* ชัดติดกันกี่เฟรมถึงถ่ายให้ (~1 วินาที) */
-const LIVE_BLUR=42;         /* เกณฑ์ความคมของภาพพรีวิว */
+const NEED=8;               /* ชัดติดกันกี่เฟรมถึงถ่ายให้ (~1.6 วินาที) */
+const SHARP0=95;            /* เกณฑ์ความคมเริ่มต้น (วัดเฉพาะในกรอบ) */
+const EDGE0=0.030;          /* สัดส่วนพิกเซลที่เป็นขอบตัวหนังสือ */
+let relax=1;                /* ถ้าเล็งนานแล้วยังไม่ผ่าน จะค่อย ๆ ผ่อนเกณฑ์ให้ */
 function stopLive(){if(liveTimer){clearInterval(liveTimer);liveTimer=null}
   goodRun=0;prevGray=null;steadyBlurTicks=0}
 function closeScanner(){stopCam();if(scEl){scEl.remove();scEl=null}}
@@ -1248,46 +1250,67 @@ async function initCam(){
   }
 }
 
-/* วิเคราะห์ภาพสดทุก ~200ms : คม / สว่าง / นิ่ง */
+/* วิเคราะห์เฉพาะ "พื้นที่ในกรอบ" ทุก ~200ms
+   เช็ก 4 อย่าง: มีเอกสารอยู่ในกรอบไหม / สว่างพอไหม / มือนิ่งไหม / คมพอไหม */
 function startLive(){
-  stopLive();
+  stopLive();relax=1;
   const v=$('cam'),c=document.createElement('canvas'),
-        x=c.getContext('2d',{willReadFrequently:true}),W=300;
+        x=c.getContext('2d',{willReadFrequently:true}),W=320;
+  let tries=0;
   liveTimer=setInterval(()=>{
     if(!camStream||!v.videoWidth||busyShot)return;
     const pill=$('scPill'),bar=$('scMeter'),lab=$('scLab'),frame=$('scFrame');
     if(!pill)return stopLive();
-    const h=Math.max(2,Math.round(v.videoHeight/v.videoWidth*W));
-    c.width=W;c.height=h;x.drawImage(v,0,0,W,h);
-    const d=x.getImageData(0,0,W,h).data,g=new Float32Array(W*h);let sum=0;
-    for(let i=0,p=0;i<d.length;i+=4,p++){const val=.299*d[i]+.587*d[i+1]+.114*d[i+2];g[p]=val;sum+=val}
-    const bright=sum/(W*h);
-    let m1=0,m2=0,cnt=0;
-    for(let y=1;y<h-1;y++)for(let xx=1;xx<W-1;xx++){const p=y*W+xx;
-      const l=4*g[p]-g[p-1]-g[p+1]-g[p-W]-g[p+W];m1+=l;m2+=l*l;cnt++}
-    const blur=Math.max(0,m2/cnt-(m1/cnt)*(m1/cnt));
+    const H=Math.max(2,Math.round(v.videoHeight/v.videoWidth*W));
+    c.width=W;c.height=H;x.drawImage(v,0,0,W,H);
+
+    /* ตัดเฉพาะกลางภาพให้ตรงกับกรอบเล็ง ไม่เอาฉากหลังมาปน */
+    const cx=Math.round(W*.14),cy=Math.round(H*.22),
+          cw=Math.round(W*.72),ch=Math.round(H*.56);
+    const d=x.getImageData(cx,cy,cw,ch).data,g=new Float32Array(cw*ch);
+    let sum=0,light=0,ink=0;
+    for(let i=0,p=0;i<d.length;i+=4,p++){
+      const val=.299*d[i]+.587*d[i+1]+.114*d[i+2];
+      g[p]=val;sum+=val;if(val>170)light++;else if(val<110)ink++}
+    const nPix=cw*ch,bright=sum/nPix,lightPct=light/nPix,inkPct=ink/nPix;
+
+    let m1=0,m2=0,cnt=0,edge=0;
+    for(let y=1;y<ch-1;y++)for(let xx=1;xx<cw-1;xx++){const p=y*cw+xx;
+      const l=4*g[p]-g[p-1]-g[p+1]-g[p-cw]-g[p+cw];
+      m1+=l;m2+=l*l;cnt++;if(l>20||l<-20)edge++}
+    const sharp=Math.max(0,m2/cnt-(m1/cnt)*(m1/cnt)),edgePct=edge/cnt;
+
     let motion=0;
     if(prevGray&&prevGray.length===g.length){let s2=0;
       for(let i=0;i<g.length;i+=3)s2+=Math.abs(g[i]-prevGray[i]);
       motion=s2/(g.length/3)}
     prevGray=g;
 
-    const pct=Math.round(Math.min(100,blur/(LIVE_BLUR*1.6)*100));
-    bar.style.width=Math.max(3,pct)+'%';
-    bar.className=pct>=62?'ok':'';
-    lab.textContent='ความคมชัด '+pct+'%';
+    /* มีกระดาษอยู่ในกรอบไหม: ต้องมีพื้นสว่างเยอะ + มีตัวหนังสือบ้าง */
+    const hasDoc = lightPct>0.30 && inkPct>0.012 && inkPct<0.60;
+    const SHARP=SHARP0*relax, EDGE=EDGE0*relax;
+    const isSharp = sharp>=SHARP && edgePct>=EDGE;
 
-    /* ถือนิ่งแล้วแต่ยังไม่คม = น่าจะเลนส์เปื้อนหรือจ่อใกล้เกินไป */
-    const steadyButBlurry=(motion<=7&&blur<LIVE_BLUR);
+    const pct=Math.round(Math.min(100,sharp/(SHARP0*1.25)*100));
+    bar.style.width=Math.max(3,pct)+'%';
+    bar.className=isSharp?'ok':'';
+    lab.textContent=`ความคมชัด ${pct}%${relax<1?' · ผ่อนเกณฑ์แล้ว':''}`;
+
+    const steadyButBlurry=(motion<=7&&hasDoc&&!isSharp);
     steadyBlurTicks=steadyButBlurry?steadyBlurTicks+1:0;
 
     let msg,cls,ok=false;
-    if(bright<45){msg='🌑 มืดไป หาที่สว่างขึ้นหน่อย';cls='warn'}
-    else if(bright>238){msg='☀️ สว่างจ้าจนตัวหนังสือหาย เลี่ยงแสงสะท้อน';cls='warn'}
+    if(!hasDoc){msg='🔎 ยังไม่เห็นใบในกรอบ<br><span style="font-size:12px;font-weight:400">เล็งให้กระดาษเต็มกรอบก่อน</span>';cls=''}
+    else if(bright<50){msg='🌑 มืดไป หาที่สว่างขึ้นหน่อย';cls='warn'}
+    else if(bright>240){msg='☀️ สว่างจ้าจนตัวหนังสือหาย เลี่ยงแสงสะท้อน';cls='warn'}
     else if(motion>7){msg='🤚 ถือนิ่ง ๆ อีกนิด';cls=''}
-    else if(steadyBlurTicks>18){msg='🧽 ถือนิ่งแล้วแต่ยังไม่คม<br><span style="font-size:12px;font-weight:400">ลองเช็ดเลนส์กล้องด้วยผ้านุ่ม แล้วถอยห่างจากใบสัก 1 ฝ่ามือ</span>';cls='tip'}
-    else if(blur<LIVE_BLUR){msg='🔍 ยังเบลอ — แตะที่ตัวหนังสือเพื่อโฟกัส';cls=''}
+    else if(steadyBlurTicks>18){msg='🧽 ถือนิ่งแล้วแต่ยังไม่คม<br><span style="font-size:12px;font-weight:400">ลองเช็ดเลนส์กล้อง แล้วถอยห่างจากใบสัก 1 ฝ่ามือ</span>';cls='tip'}
+    else if(!isSharp){msg='🔍 ยังไม่คมพอ — แตะที่ตัวหนังสือเพื่อโฟกัส';cls=''}
     else {msg='✅ ชัดแล้ว ถือค้างไว้ กำลังสแกน…';cls='ok';ok=true}
+
+    /* เล็งนานแล้วยังไม่ผ่านสักที ค่อย ๆ ผ่อนเกณฑ์ลง (ไม่ต่ำกว่า 55%) */
+    if(hasDoc&&!isSharp){tries++;if(tries%25===0)relax=Math.max(.55,relax-0.12)}
+    if(isSharp)tries=0;
 
     if(ok&&autoOn)goodRun++;else goodRun=0;
     pill.innerHTML=goodRun>0?msg+' '+'●'.repeat(goodRun):msg;
@@ -1330,7 +1353,14 @@ async function analyze(skipCheck){
   try{
     const r=await fetch('/api/ocr',{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({image:shotURL})});
-    const j=await r.json().catch(()=>({ok:false,error:'เซิร์ฟเวอร์ตอบกลับผิดรูปแบบ'}));
+    const raw=await r.text();
+    let j;
+    try{j=JSON.parse(raw)}
+    catch(err){j={ok:false,
+      error:r.status===404?'ยังไม่มีตัวอ่านเอกสารบนเซิร์ฟเวอร์ (404)':'เซิร์ฟเวอร์ตอบกลับผิดรูปแบบ ('+r.status+')',
+      hint:r.status===404
+        ?'ต้องมีไฟล์ api/ocr.js ใน repo และ vercel.json ต้องไม่ตั้ง outputDirectory ไว้ ไม่งั้น Vercel จะไม่สร้าง API ให้'
+        :'ลองดู Logs ของ deployment ล่าสุดใน Vercel'};}
     if(!j.ok){ocrErr=j;return openShotResult(null)}
     if(j.data&&j.data.readable===false)
       return retake(j.data.problem||'อ่านใบนี้ไม่ออก',j.data.advice||'ลองถ่ายใหม่ให้เห็นตารางครบทั้งใบ',1);
