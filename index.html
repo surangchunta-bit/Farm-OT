@@ -18,7 +18,7 @@
 <meta name="application-name" content="Money Farm">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Money Farm — HRM OT Calculator">
-<meta property="og:description" content="ถือกล้องค้างไว้ → ระบบสแกนใบ OT ให้เอง → รู้ทันทีว่าเดือนนี้เหลือใช้เท่าไหร่">
+<meta property="og:description" content="กรอกชั่วโมง OT → รู้ทันทีว่าเดือนนี้เหลือใช้เท่าไหร่">
 <meta name="twitter:card" content="summary_large_image">
 <style>
 /* ---- ฟอนต์ฝังในไฟล์ (base64) ใช้ได้ทั้ง iOS / Android โดยไม่ต้องต่อเน็ต ---- */
@@ -228,88 +228,62 @@ input:focus,select:focus{border-color:var(--primary);background:#fff}
 .cmp .arw{font-size:12px;font-weight:700;font-family:'Fredoka'}
 .yTree{display:grid;place-items:center;padding:6px 0 2px}
 
-/* scanner */
-.frame{position:relative;height:180px;border-radius:18px;background:#2B2417;overflow:hidden;
-  display:grid;place-items:center;color:#FFE9B8;font-size:13px;font-weight:700}
-.frame:before{content:'';position:absolute;inset:16px;border:3px dashed rgba(255,209,102,.85);border-radius:12px}
-.laser{position:absolute;left:16px;right:16px;height:5px;border-radius:9px;
-  background:linear-gradient(90deg,transparent,#FFD166,transparent);animation:scan 1.5s ease-in-out infinite}
-@keyframes scan{0%,100%{top:22px}50%{top:150px}}
-.conf{display:inline-block;background:#E7F7E3;color:#3E9B4F;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700}
+/* ---------- การ์ดกรอก OT ---------- */
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(1)}38%{transform:scale(1.02)}100%{transform:scale(1)}}
+@keyframes bump{0%{transform:scale(1)}35%{transform:scale(1.22)}100%{transform:scale(1)}}
+@keyframes wig{0%,88%,100%{transform:rotate(0)}92%{transform:rotate(-11deg)}96%{transform:rotate(11deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}
+  40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes glowRing{0%{box-shadow:0 0 0 0 rgba(255,184,77,.55)}100%{box-shadow:0 0 0 16px rgba(255,184,77,0)}}
+@keyframes spark{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}}
+@keyframes totalGlow{0%,100%{text-shadow:none}50%{text-shadow:0 0 18px rgba(255,246,228,.9)}}
 
-/* money board + eye */
-.moneyBoard{position:absolute;top:calc(54px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);
-  z-index:19;background:linear-gradient(180deg,#D89A67,#BE7C4A);border:4px solid #A66B41;border-radius:20px;
-  padding:7px 8px 7px 15px;box-shadow:0 5px 0 var(--woodD);display:flex;align-items:center;gap:12px}
-.moneyBoard .lab{font-size:10.5px;font-weight:700;color:#FFE7C4;letter-spacing:.3px}
-.moneyBoard .val{font-size:27px;font-weight:700;color:#FFF6E4;line-height:1.15;letter-spacing:-.5px;min-width:118px}
-.eye{width:40px;height:40px;border-radius:13px;background:rgba(255,246,228,.94);display:grid;place-items:center;
-  font-size:18px;flex:none;box-shadow:0 3px 0 rgba(120,85,40,.45)}
-.eye:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(120,85,40,.45)}
+.otc{background:#FFFDF7;border:3px solid var(--line);border-radius:20px;padding:12px 13px 13px;
+  margin-bottom:11px;animation:cardIn .4s cubic-bezier(.2,.9,.3,1) backwards;
+  transition:border-color .25s,background .25s}
+.otc.on{border-color:var(--primary);background:linear-gradient(180deg,#FFFBF0,#FFF6E2)}
+.otc.pop{animation:pop .34s ease-out}
+.otc.ring{animation:glowRing .6s ease-out}
+.otc .top{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.otc .ic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:20px;
+  flex:none;transform-origin:50% 80%}
+.otc.on .ic{animation:wig 3.2s ease-in-out infinite}
+.otc .nm{font-size:14px;font-weight:700;line-height:1.25}
+.otc .sub{font-size:11px;color:#9A8A6A}
+.otc .money{flex:none;font-family:'Fredoka';font-weight:700;font-size:16px;color:#9A8A6A;transition:color .3s}
+.otc.on .money{color:#3E9B4F}
+.otc .money.bump{animation:bump .42s cubic-bezier(.3,1.4,.5,1)}
 
-/* swipe to delete */
-.sw{position:relative;overflow:hidden;border-radius:18px;margin-bottom:9px;background:#E0555B}
-.sw .del{position:absolute;right:0;top:0;bottom:0;width:88px;display:grid;place-items:center;gap:1px;
-  color:#fff;font-weight:700;font-size:11.5px;background:none}
-.sw .del .di{font-size:18px}
-.sw .fr{position:relative;transition:transform .22s cubic-bezier(.2,.8,.2,1);will-change:transform;
-  background:#FFFDF7;border:3px solid var(--line);border-radius:18px;padding:10px 12px}
-.sw.open .fr{transform:translateX(-88px)}
-.swHint{font-size:11px;color:#B3A88F;font-weight:700;text-align:center;margin:2px 0 10px}
-.empty{text-align:center;padding:22px 10px;color:#9A8A6A;font-size:13px;line-height:1.7}
-.empty .ei{font-size:34px;display:block;margin-bottom:6px}
+.tin{display:flex;align-items:center;gap:9px}
+.unit{display:flex;align-items:center;gap:7px;background:#fff;border:3px solid var(--line);
+  border-radius:16px;padding:4px 12px 4px 6px;transition:border-color .2s,box-shadow .2s}
+.unit:focus-within{border-color:var(--primary);box-shadow:0 0 0 4px rgba(255,184,77,.18)}
+.unit.bad{animation:shake .35s;border-color:#E0555B}
+.unit input{width:54px;border:0;background:none;font-size:25px;font-weight:700;text-align:center;
+  padding:8px 0;min-height:0;border-radius:10px}
+.unit input:focus{background:#FFF6E2}
+.unit .u{font-size:12px;font-weight:700;color:#9A8A6A;white-space:nowrap}
+.tin .wipe{margin-left:auto;width:42px;height:42px;border-radius:14px;background:#fff;
+  border:3px solid var(--line);font-size:15px;color:#B3A88F;flex:none}
+.tin .wipe:active{transform:scale(.9)}
 
-/* ---------- สแกนเนอร์เต็มจอ (ใช้ได้ทั้งแนวตั้งและแนวนอน) ---------- */
-.scanner{position:fixed;inset:0;z-index:500;background:#0E0B08;overflow:hidden;touch-action:none}
-.scanner video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.scFrame{position:absolute;left:5%;right:5%;top:14%;bottom:26%;border:3px dashed rgba(255,209,102,.85);
-  border-radius:14px;pointer-events:none;transition:border-color .2s,box-shadow .25s}
-.scFrame.ready{border-color:#9BDE8C;border-style:solid;box-shadow:0 0 0 4000px rgba(62,155,79,.10)}
-@media (orientation:landscape){.scFrame{top:9%;bottom:24%;left:7%;right:7%}}
-.scTop{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));left:12px;right:12px;
-  display:flex;align-items:flex-start;gap:10px;z-index:6}
-.scX{width:42px;height:42px;border-radius:50%;background:rgba(255,253,244,.94);font-size:17px;color:#3D3D3D;flex:none}
-.scHint{flex:1;background:rgba(40,32,20,.8);color:#FFE9B8;border-radius:14px;padding:8px 12px;
-  font-size:12px;font-weight:700;line-height:1.5}
-.scBot{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));
-  display:grid;gap:9px;justify-items:center;z-index:6}
-.scPill{background:rgba(40,32,20,.9);color:#FFE9B8;border-radius:999px;padding:10px 18px;
-  font-size:14px;font-weight:700;border:2.5px solid rgba(255,209,102,.5);text-align:center;
-  max-width:92%;line-height:1.45;transition:.2s}
-.scPill.ok{background:rgba(62,155,79,.96);color:#fff;border-color:#9BDE8C}
-.scPill.warn{background:rgba(224,85,91,.94);color:#fff;border-color:#FFB3B6}
-.scPill.tip{background:rgba(224,150,30,.96);color:#fff;border-color:#FFD79B}
-.scMeterWrap{width:min(300px,86vw);display:grid;gap:4px;justify-items:center}
-.scMeter{width:100%;height:9px;border-radius:999px;background:rgba(255,255,255,.24);overflow:hidden}
-.scMeter i{display:block;height:100%;width:0;border-radius:999px;background:#FFB84D;transition:width .18s linear}
-.scMeter i.ok{background:linear-gradient(90deg,#A8E063,#6BBE5E)}
-.scMeterLab{font-size:11px;font-weight:700;color:#FFE9B8;opacity:.85}
-.scRow{display:flex;gap:9px;align-items:center;margin-top:2px}
-.scRow button{background:rgba(255,253,244,.94);border-radius:999px;padding:11px 16px;
-  font-size:13px;font-weight:700;color:#3D3D3D}
-.scRow .big{background:linear-gradient(180deg,#FFC366,#FFA92E);color:#fff;padding:13px 26px;font-size:15px}
-.focusRing{position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border:3px solid #FFD166;
-  border-radius:50%;opacity:0;pointer-events:none;z-index:5}
-.focusRing.go{animation:fr .75s ease-out}
-@keyframes fr{0%{opacity:1;transform:scale(1.5)}70%{opacity:1;transform:scale(1)}100%{opacity:0}}
+.mlab{font-size:10.5px;font-weight:700;color:#9A8A6A;margin:11px 0 5px}
+.mchips{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.mchips button{padding:13px 0;font-size:17px;font-family:'Fredoka';font-weight:700;border-radius:15px;
+  border:3px solid var(--line);background:#fff;color:#8A7A5A;box-shadow:0 4px 0 var(--line);
+  transition:transform .09s,box-shadow .09s,background .2s,color .2s}
+.mchips button:active{transform:translateY(4px);box-shadow:0 0 0 var(--line)}
+.mchips button.on{background:linear-gradient(180deg,#FFC366,#FFA92E);color:#fff;
+  border-color:#E3A63F;box-shadow:0 4px 0 #D9832A}
+.sp{position:fixed;width:9px;height:9px;border-radius:50%;pointer-events:none;z-index:320;
+  animation:spark .7s ease-out forwards}
 
-.shotBox{position:relative;border-radius:18px;overflow:hidden;border:3px solid var(--line);background:#241E14}
-.shotBox img{width:100%;display:block;max-height:230px;object-fit:cover}
-.shotBox .zoomBtn{position:absolute;right:9px;bottom:9px;background:rgba(255,253,244,.95);
-  border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--text);
-  box-shadow:0 3px 0 rgba(120,85,40,.4)}
-.zoomer{position:fixed;inset:0;z-index:400;background:#141018;display:grid;place-items:center;overflow:hidden;touch-action:none}
-.zoomer img{max-width:100%;max-height:100%;transform-origin:center;will-change:transform}
-.zoomer .zx{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;width:42px;height:42px;
-  border-radius:50%;background:rgba(255,253,244,.94);font-size:17px;color:#3D3D3D}
-.zoomer .zh{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:0;right:0;text-align:center;
-  color:#FFE9B8;font-size:12px;font-weight:700;opacity:.8}
-
-.spin{width:44px;height:44px;border-radius:50%;margin:0 auto;
-  border:5px solid #F0E4CB;border-top-color:var(--primary);animation:sp .9s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-.ot.uncert{border-color:#F0A63E;background:#FFF6E6;box-shadow:0 0 0 3px rgba(240,166,62,.18)}
-.conf.warn{background:#FFF1D6;color:#B57A18}
+.otProg{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.otProg .bar{flex:1}
+.otProg .cnt{font-family:'Fredoka';font-weight:700;font-size:13px;color:#9A8A6A;white-space:nowrap}
+.bigtotal{font-size:32px;font-family:'Fredoka';font-weight:700;line-height:1.2}
+.bigtotal.glow{animation:totalGlow .8s ease-out}
 
 /* fx */
 .coin{position:fixed;width:28px;height:28px;border-radius:50%;z-index:300;pointer-events:none;
@@ -604,7 +578,7 @@ input:focus,select:focus{border-color:var(--primary);background:#fff}
 <div class="nav">
   <button class="on" data-nav="farm" aria-label="ฟาร์ม"><span class="e">🏡</span><span class="t">ฟาร์ม</span></button>
   <button data-nav="market" aria-label="ตลาด"><span class="e">🛒</span><span class="t">ตลาด</span></button>
-  <button class="scanBtn" data-nav="scan" aria-label="สแกนใบ OT"><span class="si">📷</span></button>
+  <button class="scanBtn" data-nav="ot" aria-label="กรอก OT"><span class="si">🚜</span></button>
   <button data-nav="year" aria-label="รายปี"><span class="e">📅</span><span class="t">รายปี</span></button>
   <button data-nav="settings" aria-label="ตั้งค่า"><span class="e">⚙️</span><span class="t">ตั้งค่า</span></button>
 </div>
@@ -762,17 +736,36 @@ function render(){
   drawGarden();
   if(openKey&&!LIVE.includes(openKey))renderSheet(openKey,true);else liveNums();
 }
-const LIVE=['ot','settings','scan','result'];
+const LIVE=['ot','settings'];
 const rateTblHtml=()=>{const r=OTEngine.rates(S,STRICT);
   return OTEngine.buckets.map(b=>`<div class="row"><span>${b.ico} ${b.col} <span style="color:#B3A88F">(×${b.mult})</span></span>
     <b>${B2(r[b.k])}/ชม.</b></div>`).join('')};
 /* อัปเดตเฉพาะตัวเลข ไม่ rebuild ทั้งหน้า จะได้ไม่หลุด focus ตอนพิมพ์ */
+function countTo(el,to){
+  const from=(el._v===undefined)?to:el._v;el._v=to;
+  if(Math.round(from)===Math.round(to)){el.textContent=B(to);return}
+  el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');
+  const t0=performance.now();
+  const step=t=>{const p=Math.min(1,(t-t0)/450),e=1-Math.pow(1-p,3);
+    el.textContent=B(from+(to-from)*e);if(p<1)requestAnimationFrame(step)};
+  requestAnimationFrame(step);
+}
+function sparkle(el){
+  const r=el.getBoundingClientRect(),cs=['#FFD166','#FF8FAB','#7BC96F','#7DD3FC','#A78BFA'];
+  for(let i=0;i<8;i++){const d=document.createElement('div');d.className='sp';
+    d.style.background=cs[i%cs.length];
+    d.style.left=(r.left+r.width/2)+'px';d.style.top=(r.top+r.height/2)+'px';
+    d.style.setProperty('--dx',((Math.random()-.5)*90).toFixed(0)+'px');
+    d.style.setProperty('--dy',(-30-Math.random()*55).toFixed(0)+'px');
+    document.body.appendChild(d);setTimeout(()=>d.remove(),760)}
+}
 function liveNums(){const s=state();
-  if($('otTotalSign')){
-    OTEngine.buckets.forEach(b=>{$('am-'+b.k).textContent=B(s.ot.lines[b.k]);
-      $('rt-'+b.k).textContent=B2(s.ot.rates[b.k])});
-    $('otTotalSign').textContent=B(s.ot.total);
-    $('perDaySum').textContent='+'+B(s.perDay);}
+  const tot=$('otTotalSign');
+  if(tot){
+    OTEngine.buckets.forEach(b=>{const e=$('am-'+b.k);if(e)countTo(e,s.ot.lines[b.k])});
+    countTo(tot,s.ot.total);
+    tot.classList.remove('glow');void tot.offsetWidth;tot.classList.add('glow');
+    const pd=$('perDaySum');if(pd)pd.textContent='+'+B(s.perDay);}
   if($('rateTbl'))$('rateTbl').innerHTML=rateTblHtml();
 }
 let sv;function saveSoon(){clearTimeout(sv);sv=setTimeout(save,600)}
@@ -781,8 +774,8 @@ let sv;function saveSoon(){clearTimeout(sv);sv=setTimeout(save,600)}
    SHEETS
    ===================================================================== */
 let openKey=null,stack=[];
-function openSheet(k){if(k!=='scan')stopCam();openKey=k;renderSheet(k);$('scrim').classList.add('on');$('sheet').classList.add('on')}
-function closeSheet(){stopCam();openKey=null;stack=[];$('scrim').classList.remove('on');$('sheet').classList.remove('on');
+function openSheet(k){openKey=k;renderSheet(k);$('scrim').classList.add('on');$('sheet').classList.add('on')}
+function closeSheet(){openKey=null;stack=[];$('scrim').classList.remove('on');$('sheet').classList.remove('on');
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.nav==='farm'))}
 $('scrim').onclick=closeSheet;$('sheetX').onclick=closeSheet;
 
@@ -847,32 +840,87 @@ barn(){const s=state(),mx=Math.max(s.income,s.spent,s.ot.total,1);
 
 /* ---------- OT ---------- */
 ot(){const s=state();
-  return{title:'🚜 OT DELIVERY',html:`
-  <button class="btn scan" onclick="startScan()">📷 ถ่ายรูปใบ OT</button>
-  ${LASTSHOT?`<div style="height:10px"></div>
-    <button class="btn ghost sm" onclick="openZoom(LASTSHOT)">🖼️ ดูใบที่ถ่ายไว้ล่าสุด</button>`:''}
-  <p class="note" style="margin:9px 2px 14px">กรอกเป็น <b>ชม:นาที</b> ตามคอลัมน์ “สรุปชั่วโมงโอที” ในใบรายงาน เช่น 49:30</p>
-  <div id="otRows"></div>
-  <div class="sign" style="margin:4px 0 14px">💰 รวมเงิน OT <span id="otTotalSign">${B(s.ot.total)}</span></div>
+  const HM=k=>{const t=Math.round((H[k]||0)*60);return{h:Math.floor(t/60)||'',m:t%60||''}};
+  const filled=OTEngine.buckets.filter(b=>(H[b.k]||0)>0).length;
+  return{title:'🚜 กรอกชั่วโมง OT',html:`
+  <p class="note" style="margin:0 0 11px">ดู <b>แถวรวมล่างสุด</b> ของใบรายงาน แล้วใส่ตัวเลขตามคอลัมน์
+  ช่องไหนไม่มีก็ข้ามได้เลย</p>
+  <div class="otProg"><div class="bar"><i id="otProgBar" style="width:${filled/6*100}%"></i></div>
+    <span class="cnt" id="otProgCnt">${filled}/6</span></div>
+
+  ${OTEngine.buckets.map((b,i)=>{const v=HM(b.k);
+    return `<div class="otc${(H[b.k]||0)>0?' on':''}" id="c-${b.k}" style="animation-delay:${i*55}ms">
+      <div class="top"><div class="ic" style="background:${b.bg}">${b.ico}</div>
+        <div style="flex:1;min-width:0"><div class="nm">คอลัมน์ “${b.col}”</div>
+          <div class="sub">${b.name} · ${B2(s.ot.rates[b.k])}/ชม.</div></div>
+        <div class="money" id="am-${b.k}">${B(s.ot.lines[b.k])}</div></div>
+      <div class="tin">
+        <div class="unit" id="uh-${b.k}">
+          <input id="h-${b.k}" type="number" inputmode="numeric" pattern="[0-9]*" min="0"
+            placeholder="0" value="${v.h}"><span class="u">ชม.</span></div>
+        <div class="unit" id="um-${b.k}">
+          <input id="m-${b.k}" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="59"
+            placeholder="0" value="${v.m}"><span class="u">นาที</span></div>
+        <button class="wipe" data-wipe="${b.k}" aria-label="ล้างช่องนี้">✕</button></div>
+      <div class="mlab">👆 แตะเลือกนาทีได้เลย</div>
+      <div class="mchips">${[0,15,30,45].map(x=>
+        `<button data-mk="${b.k}" data-mv="${x}"${((H[b.k]||0)>0&&(v.m||0)===x)?' class="on"':''}>:${String(x).padStart(2,'0')}</button>`).join('')}</div>
+    </div>`}).join('')}
+
+  <div class="sign" style="margin:4px 0 14px">💰 รวมเงิน OT
+    <div class="bigtotal" id="otTotalSign">${B(s.ot.total)}</div></div>
+
   <div class="plank">
-    <h3 style="margin:0 0 8px;font-size:15px">🍚 เบี้ยเลี้ยงรายวัน</h3>
+    <h3 style="margin:0 0 4px;font-size:15px">🍚 เบี้ยเลี้ยง</h3>
+    <p class="note" style="margin-bottom:9px">ใส่เป็นจำนวนวัน (ดูช่องค่าอาหาร / ค่าอาหารล่วงเวลา / ค่ากะ ในใบ)</p>
     <div class="grid2">
-      <div><label class="f">ค่าข้าว (วัน)</label><input id="dMeal" type="number" inputmode="numeric" value="${D.meal||''}"></div>
-      <div><label class="f">ข้าว OT (วัน)</label><input id="dOtMeal" type="number" inputmode="numeric" value="${D.otMeal||''}"></div></div>
-    <label class="f">ค่ากะ (จำนวนกะ)</label><input id="dShift" type="number" inputmode="numeric" value="${D.shift||''}">
-    <div class="row" style="margin-top:10px"><span>รวมเบี้ยเลี้ยง</span><b class="pos" id="perDaySum">+${B(s.perDay)}</b></div>
-  </div>`,
+      <div><label class="f">ค่าอาหาร (วัน)</label>
+        <input id="dMeal" type="number" inputmode="numeric" pattern="[0-9]*" min="0" placeholder="0" value="${D.meal||''}"></div>
+      <div><label class="f">ค่าอาหารล่วงเวลา (วัน)</label>
+        <input id="dOtMeal" type="number" inputmode="numeric" pattern="[0-9]*" min="0" placeholder="0" value="${D.otMeal||''}"></div></div>
+    <label class="f">ค่ากะ (จำนวนกะ)</label>
+    <input id="dShift" type="number" inputmode="numeric" pattern="[0-9]*" min="0" placeholder="0" value="${D.shift||''}">
+    <div class="row" style="margin-top:11px"><span>รวมเบี้ยเลี้ยง</span>
+      <b class="pos" id="perDaySum">+${B(s.perDay)}</b></div>
+  </div>
+
+  <button class="btn" id="otDone">✓ เสร็จแล้ว</button>
+  <div style="height:10px"></div>
+  <button class="btn ghost sm" id="otClear">🧹 ล้างตัวเลขทั้งหมด</button>`,
   after(){
-    $('otRows').innerHTML=OTEngine.buckets.map(b=>`
-      <div class="ot"><div class="ico" style="background:${b.bg}">${b.ico}</div>
-      <div class="mid"><div class="nm">${b.name}</div>
-      <div class="rate">คอลัมน์ “${b.col}” · <span id="rt-${b.k}">${B2(s.ot.rates[b.k])}</span>/ชม.</div></div>
-      <input id="in-${b.k}" placeholder="0:00" inputmode="numeric" value="${H[b.k]?toHM(H[b.k]):''}">
-      <div class="amt" id="am-${b.k}">${B(s.ot.lines[b.k])}</div></div>`).join('');
-    OTEngine.buckets.forEach(b=>{const el=$('in-'+b.k);
-      el.addEventListener('input',()=>{H[b.k]=hm(el.value);render();saveSoon()})});
+    const chips=k=>{const m=Math.round(((H[k]||0)*60)%60);
+      $('sheetBody').querySelectorAll('[data-mk="'+k+'"]').forEach(c=>
+        c.classList.toggle('on',(H[k]||0)>0&&+c.dataset.mv===m))};
+    const bumpProg=()=>{const f=OTEngine.buckets.filter(b=>(H[b.k]||0)>0).length;
+      $('otProgBar').style.width=f/6*100+'%';$('otProgCnt').textContent=f+'/6'};
+    const pull=(k,ring)=>{
+      const hi=$('h-'+k),mi=$('m-'+k);
+      let mv=n(mi.value);
+      if(mv>59){mi.value=59;mv=59;const u=$('um-'+k);
+        u.classList.remove('bad');void u.offsetWidth;u.classList.add('bad');
+        toast('นาทีใส่ได้ไม่เกิน 59')}
+      H[k]=n(hi.value)+mv/60;
+      const card=$('c-'+k);
+      card.classList.toggle('on',H[k]>0);
+      card.classList.remove('pop');void card.offsetWidth;card.classList.add('pop');
+      if(ring){card.classList.remove('ring');void card.offsetWidth;card.classList.add('ring')}
+      chips(k);bumpProg();render();saveSoon();
+    };
+    OTEngine.buckets.forEach(b=>['h-','m-'].forEach(pre=>
+      $(pre+b.k).addEventListener('input',()=>pull(b.k))));
+    $('sheetBody').querySelectorAll('[data-mk]').forEach(btn=>btn.onclick=e=>{
+      const k=btn.dataset.mk,mv=+btn.dataset.mv;
+      $('m-'+k).value=mv||'';
+      sparkle(e.currentTarget);pull(k,1);
+      if(!n($('h-'+k).value))$('h-'+k).focus();
+      try{navigator.vibrate&&navigator.vibrate(12)}catch(err){}});
+    $('sheetBody').querySelectorAll('[data-wipe]').forEach(btn=>btn.onclick=()=>{
+      const k=btn.dataset.wipe;$('h-'+k).value='';$('m-'+k).value='';pull(k)});
     [['dMeal','meal'],['dOtMeal','otMeal'],['dShift','shift']].forEach(([id,k])=>
       $(id).addEventListener('input',e=>{D[k]=n(e.target.value);render();saveSoon()}));
+    $('otDone').onclick=()=>{save();closeSheet();coins()};
+    $('otClear').onclick=()=>{H={h1:0,h15:0,h3:0,h15p:0,h2p:0,h3p:0};D={meal:0,otMeal:0,shift:0};
+      render();save();renderSheet('ot');toast('ล้างตัวเลขแล้ว 🧹')};
   }};},
 
 /* ---------- ตลาด ---------- */
@@ -1124,351 +1172,6 @@ function addQuick(){const el=$('quick'),t=el.value.trim();if(!t)return;
   toast(`${CATS.find(x=>x.k===cat).i} ${label} ${B(amount)}`);}
 
 /* =====================================================================
-   กล้อง → ตรวจคุณภาพรูป → ส่งให้ AI อ่าน → เติมตัวเลขอัตโนมัติ
-   ===================================================================== */
-let camStream=null, shotURL=null, LASTSHOT=null, ocrErr=null;
-const SHOTKEY='moneyfarm:shot';
-const BLUR_MIN=55;            /* ต่ำกว่านี้ถือว่าเบลอเกินไป */
-function stopCam(){if(typeof stopLive==='function')stopLive();camTrack=null;
-  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}}
-function loadShot(){try{LASTSHOT=localStorage.getItem(SHOTKEY)}catch(e){}}
-function saveShot(){try{localStorage.setItem(SHOTKEY,shotURL)}catch(e){}LASTSHOT=shotURL}
-
-function shrink(el,w0,h0){const M=1600;let w=w0,h=h0;
-  if(!w||!h)return null;
-  if(Math.max(w,h)>M){const r=M/Math.max(w,h);w=Math.round(w*r);h=Math.round(h*r)}
-  const c=document.createElement('canvas');c.width=w;c.height=h;
-  c.getContext('2d').drawImage(el,0,0,w,h);
-  return c.toDataURL('image/jpeg',0.8)}
-
-/* วัดความคมชัดด้วย Laplacian variance + ความสว่างเฉลี่ย ทำในเครื่อง ไม่ต้องส่งขึ้นเน็ต */
-function imgQuality(src){return new Promise(done=>{
-  const im=new Image();
-  im.onload=()=>{
-    const W=420,h=Math.max(2,Math.round(im.naturalHeight/im.naturalWidth*W));
-    const c=document.createElement('canvas');c.width=W;c.height=h;
-    const x=c.getContext('2d');x.drawImage(im,0,0,W,h);
-    const d=x.getImageData(0,0,W,h).data,g=new Float32Array(W*h);let sum=0;
-    for(let i=0,p=0;i<d.length;i+=4,p++){const v=.299*d[i]+.587*d[i+1]+.114*d[i+2];g[p]=v;sum+=v}
-    const bright=sum/(W*h);let m=0,m2=0,cnt=0;
-    for(let y=1;y<h-1;y++)for(let xx=1;xx<W-1;xx++){const p=y*W+xx;
-      const l=4*g[p]-g[p-1]-g[p+1]-g[p-W]-g[p+W];m+=l;m2+=l*l;cnt++}
-    const mean=m/cnt;
-    done({blur:Math.max(0,m2/cnt-mean*mean),bright});
-  };
-  im.onerror=()=>done({blur:999,bright:128});
-  im.src=src});}
-
-/* ---------- สแกนเนอร์: เปิดค้างไว้ ระบบคอยดูให้เองว่าชัดพอหรือยัง ---------- */
-let liveTimer=null, goodRun=0, prevGray=null, autoOn=true, busyShot=false;
-let steadyBlurTicks=0, camTrack=null, scEl=null;
-const NEED=8;               /* ชัดติดกันกี่เฟรมถึงถ่ายให้ (~1.6 วินาที) */
-const SHARP0=95;            /* เกณฑ์ความคมเริ่มต้น (วัดเฉพาะในกรอบ) */
-const EDGE0=0.030;          /* สัดส่วนพิกเซลที่เป็นขอบตัวหนังสือ */
-let relax=1;                /* ถ้าเล็งนานแล้วยังไม่ผ่าน จะค่อย ๆ ผ่อนเกณฑ์ให้ */
-function stopLive(){if(liveTimer){clearInterval(liveTimer);liveTimer=null}
-  goodRun=0;prevGray=null;steadyBlurTicks=0}
-function closeScanner(){stopCam();if(scEl){scEl.remove();scEl=null}}
-
-function startScan(){
-  closeSheet();closeScanner();busyShot=false;
-  const portrait=window.innerHeight>window.innerWidth;
-  const el=document.createElement('div');el.className='scanner';
-  el.innerHTML=`
-    <video id="cam" playsinline muted autoplay></video>
-    <div class="scFrame" id="scFrame"></div>
-    <div class="focusRing" id="focusRing"></div>
-    <div class="scTop"><button class="scX" id="scX">✕</button>
-      <div class="scHint" id="scHint">${portrait
-        ?'📄 ใบ OT เป็นแนวนอน — หมุนมือถือเป็นแนวนอนจะเห็นทั้งใบและตัวเลขใหญ่ขึ้น'
-        :'วางใบให้เต็มกรอบ โดยเฉพาะ <b>แถวรวมล่างสุด</b> · แตะที่ตัวหนังสือเพื่อสั่งโฟกัส'}</div></div>
-    <div class="scBot">
-      <div class="scPill" id="scPill">กำลังเปิดกล้อง…</div>
-      <div class="scMeterWrap"><div class="scMeter"><i id="scMeter"></i></div>
-        <div class="scMeterLab" id="scLab">ความคมชัด —</div></div>
-      <div class="scRow">
-        <button id="scPick">🖼️</button>
-        <button class="big" id="scShot">📸 ถ่ายเอง</button>
-        <button id="scAuto">⚡ ออโต้</button></div>
-      <input id="pick" type="file" accept="image/*" capture="environment" style="display:none">
-    </div>`;
-  document.body.appendChild(el);scEl=el;
-  $('scX').onclick=closeScanner;
-  $('scShot').onclick=()=>grabShot(1);
-  $('scPick').onclick=()=>$('pick').click();
-  $('pick').onchange=fileShot;
-  const upAuto=()=>$('scAuto').textContent=autoOn?'⚡ ออโต้':'✋ กดเอง';
-  $('scAuto').onclick=()=>{autoOn=!autoOn;goodRun=0;upAuto();
-    toast(autoOn?'เปิดสแกนอัตโนมัติ':'ปิดออโต้ — กดปุ่มถ่ายเอง')};
-  upAuto();
-  el.querySelector('video').addEventListener('click',e=>tapFocus(e));
-  window.addEventListener('orientationchange',orientHint);
-  initCam();
-}
-function orientHint(){setTimeout(()=>{const h=$('scHint');if(!h)return;
-  h.innerHTML=window.innerHeight>window.innerWidth
-    ?'📄 ใบ OT เป็นแนวนอน — หมุนมือถือเป็นแนวนอนจะเห็นทั้งใบและตัวเลขใหญ่ขึ้น'
-    :'วางใบให้เต็มกรอบ โดยเฉพาะ <b>แถวรวมล่างสุด</b> · แตะที่ตัวหนังสือเพื่อสั่งโฟกัส'},400)}
-
-/* แตะจอ = สั่งโฟกัสจุดนั้น (เครื่องที่รองรับ) + วงแหวนโฟกัส */
-async function tapFocus(e){
-  const r=$('scFrame').parentElement.getBoundingClientRect();
-  const ring=$('focusRing');
-  if(ring){ring.style.left=(e.clientX-r.left)+'px';ring.style.top=(e.clientY-r.top)+'px';
-    ring.classList.remove('go');void ring.offsetWidth;ring.classList.add('go')}
-  if(!camTrack)return;
-  const x=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
-  const y=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));
-  const caps=camTrack.getCapabilities?camTrack.getCapabilities():{};
-  try{
-    if(caps.pointsOfInterest)
-      await camTrack.applyConstraints({advanced:[{pointsOfInterest:[{x,y}]}]});
-    if(caps.focusMode&&caps.focusMode.includes('single-shot'))
-      await camTrack.applyConstraints({advanced:[{focusMode:'single-shot'}]});
-    else if(caps.focusMode&&caps.focusMode.includes('continuous'))
-      await camTrack.applyConstraints({advanced:[{focusMode:'continuous'}]});
-  }catch(err){}
-  steadyBlurTicks=0;
-}
-
-async function initCam(){
-  const v=$('cam'),pill=$('scPill');
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    pill.className='scPill warn';
-    pill.innerHTML='เครื่องนี้เปิดกล้องในเบราว์เซอร์ไม่ได้<br>กดปุ่มรูปภาพเพื่อเลือกจากเครื่องแทน';return}
-  try{
-    camStream=await navigator.mediaDevices.getUserMedia(
-      {video:{facingMode:{ideal:'environment'},width:{ideal:2560},height:{ideal:1440}},audio:false});
-    v.srcObject=camStream;camTrack=camStream.getVideoTracks()[0];
-    try{await camTrack.applyConstraints({advanced:[{focusMode:'continuous'}]})}catch(e){}
-    startLive();
-  }catch(e){
-    pill.className='scPill warn';
-    pill.innerHTML=(location.protocol==='https:'||location.hostname==='localhost')
-      ?'ยังไม่ได้อนุญาตให้ใช้กล้อง<br><span style="font-size:11.5px;opacity:.9">กดไอคอนซ้ายช่อง URL → อนุญาตกล้อง → เปิดหน้าใหม่</span>'
-      :'กล้องใช้ได้เฉพาะเว็บที่เป็น https<br><span style="font-size:11.5px;opacity:.9">กดปุ่มรูปภาพเพื่อเลือกจากเครื่องแทน</span>';
-  }
-}
-
-/* วิเคราะห์เฉพาะ "พื้นที่ในกรอบ" ทุก ~200ms
-   เช็ก 4 อย่าง: มีเอกสารอยู่ในกรอบไหม / สว่างพอไหม / มือนิ่งไหม / คมพอไหม */
-function startLive(){
-  stopLive();relax=1;
-  const v=$('cam'),c=document.createElement('canvas'),
-        x=c.getContext('2d',{willReadFrequently:true}),W=320;
-  let tries=0;
-  liveTimer=setInterval(()=>{
-    if(!camStream||!v.videoWidth||busyShot)return;
-    const pill=$('scPill'),bar=$('scMeter'),lab=$('scLab'),frame=$('scFrame');
-    if(!pill)return stopLive();
-    const H=Math.max(2,Math.round(v.videoHeight/v.videoWidth*W));
-    c.width=W;c.height=H;x.drawImage(v,0,0,W,H);
-
-    /* ตัดเฉพาะกลางภาพให้ตรงกับกรอบเล็ง ไม่เอาฉากหลังมาปน */
-    const cx=Math.round(W*.14),cy=Math.round(H*.22),
-          cw=Math.round(W*.72),ch=Math.round(H*.56);
-    const d=x.getImageData(cx,cy,cw,ch).data,g=new Float32Array(cw*ch);
-    let sum=0,light=0,ink=0;
-    for(let i=0,p=0;i<d.length;i+=4,p++){
-      const val=.299*d[i]+.587*d[i+1]+.114*d[i+2];
-      g[p]=val;sum+=val;if(val>170)light++;else if(val<110)ink++}
-    const nPix=cw*ch,bright=sum/nPix,lightPct=light/nPix,inkPct=ink/nPix;
-
-    let m1=0,m2=0,cnt=0,edge=0;
-    for(let y=1;y<ch-1;y++)for(let xx=1;xx<cw-1;xx++){const p=y*cw+xx;
-      const l=4*g[p]-g[p-1]-g[p+1]-g[p-cw]-g[p+cw];
-      m1+=l;m2+=l*l;cnt++;if(l>20||l<-20)edge++}
-    const sharp=Math.max(0,m2/cnt-(m1/cnt)*(m1/cnt)),edgePct=edge/cnt;
-
-    let motion=0;
-    if(prevGray&&prevGray.length===g.length){let s2=0;
-      for(let i=0;i<g.length;i+=3)s2+=Math.abs(g[i]-prevGray[i]);
-      motion=s2/(g.length/3)}
-    prevGray=g;
-
-    /* มีกระดาษอยู่ในกรอบไหม: ต้องมีพื้นสว่างเยอะ + มีตัวหนังสือบ้าง */
-    const hasDoc = lightPct>0.30 && inkPct>0.012 && inkPct<0.60;
-    const SHARP=SHARP0*relax, EDGE=EDGE0*relax;
-    const isSharp = sharp>=SHARP && edgePct>=EDGE;
-
-    const pct=Math.round(Math.min(100,sharp/(SHARP0*1.25)*100));
-    bar.style.width=Math.max(3,pct)+'%';
-    bar.className=isSharp?'ok':'';
-    lab.textContent=`ความคมชัด ${pct}%${relax<1?' · ผ่อนเกณฑ์แล้ว':''}`;
-
-    const steadyButBlurry=(motion<=7&&hasDoc&&!isSharp);
-    steadyBlurTicks=steadyButBlurry?steadyBlurTicks+1:0;
-
-    let msg,cls,ok=false;
-    if(!hasDoc){msg='🔎 ยังไม่เห็นใบในกรอบ<br><span style="font-size:12px;font-weight:400">เล็งให้กระดาษเต็มกรอบก่อน</span>';cls=''}
-    else if(bright<50){msg='🌑 มืดไป หาที่สว่างขึ้นหน่อย';cls='warn'}
-    else if(bright>240){msg='☀️ สว่างจ้าจนตัวหนังสือหาย เลี่ยงแสงสะท้อน';cls='warn'}
-    else if(motion>7){msg='🤚 ถือนิ่ง ๆ อีกนิด';cls=''}
-    else if(steadyBlurTicks>18){msg='🧽 ถือนิ่งแล้วแต่ยังไม่คม<br><span style="font-size:12px;font-weight:400">ลองเช็ดเลนส์กล้อง แล้วถอยห่างจากใบสัก 1 ฝ่ามือ</span>';cls='tip'}
-    else if(!isSharp){msg='🔍 ยังไม่คมพอ — แตะที่ตัวหนังสือเพื่อโฟกัส';cls=''}
-    else {msg='✅ ชัดแล้ว ถือค้างไว้ กำลังสแกน…';cls='ok';ok=true}
-
-    /* เล็งนานแล้วยังไม่ผ่านสักที ค่อย ๆ ผ่อนเกณฑ์ลง (ไม่ต่ำกว่า 55%) */
-    if(hasDoc&&!isSharp){tries++;if(tries%25===0)relax=Math.max(.55,relax-0.12)}
-    if(isSharp)tries=0;
-
-    if(ok&&autoOn)goodRun++;else goodRun=0;
-    pill.innerHTML=goodRun>0?msg+' '+'●'.repeat(goodRun):msg;
-    pill.className='scPill '+cls;
-    frame.classList.toggle('ready',ok);
-
-    if(goodRun>=NEED){busyShot=true;stopLive();
-      try{navigator.vibrate&&navigator.vibrate([25,45,25])}catch(e){}
-      pill.innerHTML='📸 ภาพชัดพอแล้ว กำลังอ่านข้อมูล…';pill.className='scPill ok';
-      setTimeout(()=>grabShot(0,1),140)}
-  },200);
-}
-
-function grabShot(manual,auto){
-  const v=$('cam');
-  if(!camStream||!v.videoWidth){busyShot=false;return toast('กล้องยังไม่พร้อม ลองเลือกรูปจากเครื่องแทน')}
-  busyShot=true;stopLive();
-  shotURL=shrink(v,v.videoWidth,v.videoHeight);
-  closeScanner();saveShot();
-  analyze(auto?1:0);
-}
-function fileShot(e){const f=e.target.files&&e.target.files[0];if(!f)return;
-  const img=new Image();
-  img.onload=()=>{shotURL=shrink(img,img.naturalWidth,img.naturalHeight);
-    URL.revokeObjectURL(img.src);closeScanner();saveShot();analyze()};
-  img.onerror=()=>toast('เปิดไฟล์รูปไม่ได้');
-  img.src=URL.createObjectURL(f)}
-
-/* ---------- ตรวจรูป แล้วส่งให้ AI อ่าน ---------- */
-async function analyze(skipCheck){
-  ocrErr=null;
-  if(!skipCheck){
-    const q=await imgQuality(shotURL);
-    if(q.blur<BLUR_MIN) return retake('รูปเบลอเกินไป อ่านตัวเลขไม่ออก',
-      'จับมือถือให้นิ่ง แตะที่ตารางเพื่อให้กล้องโฟกัสก่อนกดถ่าย');
-    if(q.bright<45) return retake('รูปมืดเกินไป','หาที่สว่างขึ้น หรืออย่าให้เงาตัวเองบังใบ');
-    if(q.bright>238) return retake('รูปสว่างจ้าจนตัวหนังสือหาย','เลี่ยงแสงสะท้อนลงบนกระดาษ');
-  }
-  reading();
-  try{
-    const r=await fetch('/api/ocr',{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({image:shotURL})});
-    const raw=await r.text();
-    let j;
-    try{j=JSON.parse(raw)}
-    catch(err){j={ok:false,
-      error:r.status===404?'ยังไม่มีตัวอ่านเอกสารบนเซิร์ฟเวอร์ (404)':'เซิร์ฟเวอร์ตอบกลับผิดรูปแบบ ('+r.status+')',
-      hint:r.status===404
-        ?'ต้องมีไฟล์ api/ocr.js ใน repo และ vercel.json ต้องไม่ตั้ง outputDirectory ไว้ ไม่งั้น Vercel จะไม่สร้าง API ให้'
-        :'ลองดู Logs ของ deployment ล่าสุดใน Vercel'};}
-    if(!j.ok){ocrErr=j;return openShotResult(null)}
-    if(j.data&&j.data.readable===false)
-      return retake(j.data.problem||'อ่านใบนี้ไม่ออก',j.data.advice||'ลองถ่ายใหม่ให้เห็นตารางครบทั้งใบ',1);
-    try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}
-    toast('✅ อ่านข้อมูลเสร็จแล้ว');
-    openShotResult(j.data);
-  }catch(e){
-    ocrErr={error:'ต่อระบบอ่านเอกสารไม่ได้',
-      hint:'ถ้าเปิดไฟล์จากเครื่องตรง ๆ จะยังไม่มีตัวอ่าน ต้องเปิดผ่านลิงก์เว็บที่ deploy ไว้'};
-    openShotResult(null);
-  }
-}
-function reading(){
-  VIEWS.reading=()=>({title:'🔎 กำลังอ่านใบ',html:`
-    <div class="shotBox"><img src="${shotURL}" alt="ใบ OT"></div>
-    <div style="text-align:center;padding:22px 10px">
-      <div class="spin"></div>
-      <div style="font-weight:700;margin-top:14px" id="rdMsg">กำลังอ่านตัวเลขจากใบ…</div>
-      <div class="note" style="margin-top:6px">ใช้เวลาราว 5–15 วินาที</div></div>`,
-    after(){const st=['กำลังอ่านหัวกระดาษ…','กำลังหาแถวรวมท้ายใบ…','กำลังอ่านคอลัมน์โอที…','กำลังตรวจทานตัวเลข…'];
-      let i=0;const t=setInterval(()=>{const e=$('rdMsg');
-        if(!e){clearInterval(t);return}e.textContent=st[i++%st.length]},2200)}});
-  openSheet('reading');
-}
-function retake(why,advice,fromAI){
-  VIEWS.retake=()=>({title:'📷 ขอถ่ายใหม่อีกครั้ง',html:`
-    <div class="shotBox"><img src="${shotURL}" alt="ใบ OT">
-      <button class="zoomBtn" onclick="openZoom(shotURL)">🔍 ขยายดู</button></div>
-    <div class="warnbox" style="margin:13px 0">
-      <b>⚠️ ${esc(why)}</b><br>${esc(advice||'')}
-      ${fromAI?'<br><span style="opacity:.75">(ระบบอ่านใบแล้วแต่ยืนยันตัวเลขไม่ได้)</span>':''}</div>
-    <button class="btn scan" onclick="startScan()">📸 ถ่ายใหม่</button>
-    <div style="height:10px"></div>
-    <button class="btn ghost sm" onclick="analyze(1)">ลองให้อ่านรูปนี้อยู่ดี</button>
-    <div style="height:10px"></div>
-    <button class="btn ghost sm" onclick="openShotResult(null,1)">✏️ กรอกตัวเลขเอง</button>`});
-  openSheet('retake');
-}
-
-/* ---------- หน้าผลลัพธ์ + ตรวจแก้ ---------- */
-function openShotResult(data,manual){
-  VIEWS.result=()=>{
-    const unc=(data&&data.uncertain)||[];
-    const val=k=>{const v=data&&data.ot&&data.ot[k];return v?esc(v):(H[k]?toHM(H[k]):'')};
-    const dc=k=>{const v=data&&data.dayCounts&&data.dayCounts[k];
-      return (v||v===0)?v:(D[k]||'')};
-    const conf=data&&typeof data.confidence==='number'?data.confidence:null;
-    return{title:data?'✨ อ่านใบเสร็จแล้ว':'📝 กรอกตัวเลขจากใบ',html:`
-    ${shotURL?`<div class="shotBox"><img src="${shotURL}" alt="ใบ OT">
-      <button class="zoomBtn" onclick="openZoom(shotURL)">🔍 ขยายดู</button></div>`:''}
-    ${conf!==null?`<div style="text-align:center;margin:11px 0 4px">
-      <span class="conf${conf<80?' warn':''}">${conf>=90?'🟢':conf>=75?'🟡':'🟠'} อ่านได้ ${conf}%</span></div>`:''}
-    ${data&&data.period?`<p class="note" style="text-align:center;margin:4px 0 12px">รอบ ${esc(data.period)}${data.employeeCode?' · รหัส '+esc(data.employeeCode):''}</p>`:'<div style="height:12px"></div>'}
-    ${ocrErr?`<div class="warnbox" style="margin-bottom:13px"><b>⚠️ ${esc(ocrErr.error||'อ่านอัตโนมัติไม่สำเร็จ')}</b>
-      ${ocrErr.hint?'<br>'+esc(ocrErr.hint):''}<br>กรอกตัวเลขเองด้านล่างได้เลย</div>`:''}
-    ${unc.length?`<div class="warnbox" style="margin-bottom:13px">⚠️ ช่องที่ขีดสีส้มคือช่องที่ระบบไม่มั่นใจ ช่วยตรวจก่อนบันทึก</div>`:''}
-    <div class="plank">
-      <h3 style="margin:0 0 8px;font-size:15px">🚜 ชั่วโมงโอที (ชม:นาที)</h3>
-      ${OTEngine.buckets.map(b=>`<div class="ot${unc.includes(b.k)?' uncert':''}" style="margin-bottom:8px">
-        <div class="ico" style="background:${b.bg}">${b.ico}</div>
-        <div class="mid"><div class="nm">คอลัมน์ “${b.col}”</div><div class="rate">${b.name}</div></div>
-        <input id="rin-${b.k}" placeholder="0:00" inputmode="numeric" value="${val(b.k)}"></div>`).join('')}
-    </div>
-    <div class="plank">
-      <h3 style="margin:0 0 8px;font-size:15px">🍚 เบี้ยเลี้ยง (จำนวนวัน)</h3>
-      <div class="grid2">
-        <div><label class="f">ค่าอาหาร</label><input id="rd-meal" type="number" inputmode="numeric" value="${dc('meal')}"></div>
-        <div><label class="f">ค่าอาหารล่วงเวลา</label><input id="rd-otMeal" type="number" inputmode="numeric" value="${dc('otMeal')}"></div></div>
-      <label class="f">ค่ากะ (จำนวนกะ)</label><input id="rd-shift" type="number" inputmode="numeric" value="${dc('shift')}">
-    </div>
-    <div class="sign" style="margin-bottom:12px">💰 เงิน OT ที่คำนวณได้ <span id="rPreview">฿0</span></div>
-    <button class="btn" id="rSave">✓ บันทึกลงเดือนนี้</button>
-    <div style="height:10px"></div>
-    <button class="btn ghost sm" onclick="startScan()">📸 ถ่ายใหม่</button>`,
-    after(){
-      const read=()=>{const h={};OTEngine.buckets.forEach(b=>h[b.k]=hm($('rin-'+b.k).value));
-        return{h,d:{meal:n($('rd-meal').value),otMeal:n($('rd-otMeal').value),shift:n($('rd-shift').value)}}};
-      const pv=()=>{const{h}=read();$('rPreview').textContent=B(OTEngine.otPay(S,h,STRICT).total)};
-      OTEngine.buckets.forEach(b=>$('rin-'+b.k).addEventListener('input',pv));
-      pv();
-      $('rSave').onclick=()=>{const{h,d}=read();Object.assign(H,h);Object.assign(D,d);
-        render();save();closeSheet();coins()};
-    }}};
-  openSheet('result');
-}
-
-/* ---------- ซูมรูป ---------- */
-function openZoom(src){
-  if(!src)return;
-  const z=document.createElement('div');z.className='zoomer';
-  z.innerHTML='<img alt="ใบ OT"><button class="zx">✕</button><div class="zh">สองนิ้วซูม · ลากเลื่อน · แตะสองครั้งรีเซ็ต</div>';
-  z.querySelector('img').src=src;document.body.appendChild(z);
-  const img=z.querySelector('img');
-  let sc=1,tx=0,ty=0,s0=1,d0=0,px=0,py=0,last=0;
-  const up=()=>img.style.transform=`translate(${tx}px,${ty}px) scale(${sc})`;
-  const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
-  z.addEventListener('touchstart',e=>{
-    if(e.touches.length===2){d0=dist(e.touches);s0=sc}
-    else{px=e.touches[0].clientX-tx;py=e.touches[0].clientY-ty;
-      const t=Date.now();if(t-last<300){sc=1;tx=0;ty=0;up()}last=t}},{passive:true});
-  z.addEventListener('touchmove',e=>{e.preventDefault();
-    if(e.touches.length===2&&d0){sc=Math.max(1,Math.min(7,s0*dist(e.touches)/d0))}
-    else if(e.touches.length===1&&sc>1){tx=e.touches[0].clientX-px;ty=e.touches[0].clientY-py}
-    up()},{passive:false});
-  z.querySelector('.zx').onclick=()=>z.remove();
-}
-
-/* =====================================================================
    FX
    ===================================================================== */
 function coins(){const tgt=$('hCoin').getBoundingClientRect();
@@ -1524,16 +1227,16 @@ document.querySelectorAll('.spot').forEach(sp=>{
     openSheet(sp.dataset.open)});
 });
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{
-  if(b.dataset.nav!=='scan')document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('on',x===b));
-  if(b.dataset.nav==='scan'){b.classList.remove('on');
-    document.querySelector('.nav [data-nav="farm"]').classList.add('on');startScan();return}
+  if(b.dataset.nav!=='ot')document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('on',x===b));
+  if(b.dataset.nav==='ot'){b.classList.remove('on');
+    document.querySelector('.nav [data-nav="farm"]').classList.add('on');openSheet('ot');return}
   if(b.dataset.nav==='farm')closeSheet();else openSheet(b.dataset.nav)});
 
 (function(){try{const l=document.createElement('link');l.rel='manifest';
   l.href='data:application/manifest+json;charset=utf-8,'+encodeURIComponent(JSON.stringify(MANIFEST));
   document.head.appendChild(l)}catch(e){}})();
 
-(async()=>{await load();loadShot();applyTime();render();
+(async()=>{await load();applyTime();render();
   setInterval(applyTime,60000);
   setTimeout(()=>{if(!openKey)toast('แตะสิ่งของในฟาร์มเพื่อดูข้อมูล 👆')},1400);
 })();
